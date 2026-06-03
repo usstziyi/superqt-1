@@ -1,0 +1,9 @@
+[project]
+name = "superqt-tutorial"
+version = "0.1.0"
+description = "PySide6 + superqt learning tutorial, from basic to advanced"
+requires-python = ">=3.10"
+dependencies = [
+    "pyside6>=6.7.0",
+    "superqt>=0.6.0",
+]
