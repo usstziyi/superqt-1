@@ -59,10 +59,10 @@ class SearchableListDemo(QWidget):
     def setup_tree(self):
         """设置树形结构"""
         # 设置列
-        self.searchable_tree.setHeaderLabels(["名称", "类型"])
+        self.searchable_tree.tree.setHeaderLabels(["名称", "类型"])
 
         # 添加水果类别
-        fruits = self.searchable_tree.invisibleRootItem()
+        fruits = self.searchable_tree.tree.invisibleRootItem()
 
         # 热带水果
         tropical = self.add_tree_item(fruits, "热带水果", "分类")
@@ -86,7 +86,7 @@ class SearchableListDemo(QWidget):
         self.add_tree_item(berries, "黑莓", "水果")
 
         # 展开所有节点
-        self.searchable_tree.expandAll()
+        self.searchable_tree.tree.expandAll()
 
     def add_tree_item(self, parent, text, type_text):
         """添加树节点"""
