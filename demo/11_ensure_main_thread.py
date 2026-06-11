@@ -52,9 +52,6 @@ class EnsureMainThreadDemo(QWidget):
 
         # 结果标签（UI 组件）
         self.result_label = QLabel("等待结果...")
-        self.result_label.setStyleSheet(
-            "background-color: #f0f0f0; padding: 10px; border-radius: 5px;"
-        )
         layout.addWidget(self.result_label)
 
         # 按钮
@@ -77,6 +74,7 @@ class EnsureMainThreadDemo(QWidget):
         self.log_text.setMaximumHeight(120)
         layout.addWidget(self.log_text)
 
+    # @ensure_main_thread
     def log(self, message):
         """添加日志"""
         import threading
@@ -89,10 +87,11 @@ class EnsureMainThreadDemo(QWidget):
     # ===== 关键：这个方法被 ensure_main_thread 装饰 =====
     # 即使在后台线程调用它，也会自动切换到主线程执行
     @ensure_main_thread
-    def update_result_ui(self, text):
+    def update_result_ui(self, value):
         """更新结果标签的 UI 方法"""
-        self.result_label.setText(text)
-        self.log(f"UI 已更新: {text}")
+        self.result_label.setText(f"处理中... {value}%")
+        self.progress.setValue(value)
+        self.log(f"UI 已更新: {value}")
 
     @thread_worker
     def background_task_correct(self):
@@ -102,10 +101,7 @@ class EnsureMainThreadDemo(QWidget):
             time.sleep(0.5)
             # 在后台线程调用 self.update_result_ui
             # @ensure_main_thread 会自动将其切换到主线程执行
-            self.update_result_ui(f"处理中... {i * 20}%")
-            self.update_progress.emit(i * 20)
-
-        self.update_result_ui("处理完成！✅")
+            self.update_result_ui(i * 20)
         return "成功"
 
     @thread_worker
@@ -128,6 +124,7 @@ class EnsureMainThreadDemo(QWidget):
 
         worker = self.background_task_correct()
         worker.returned.connect(self.on_task_done)
+        worker.start()
 
     def run_wrong(self):
         """运行错误的后台任务"""
@@ -138,6 +135,7 @@ class EnsureMainThreadDemo(QWidget):
 
         worker = self.background_task_wrong()
         worker.returned.connect(self.on_task_done)
+        worker.start()
 
     def on_task_done(self, result):
         """任务完成"""
