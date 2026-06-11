@@ -42,6 +42,7 @@ class LabeledSliderDemo(QWidget):
         self.slider2.setRange(0, 100)
         self.slider2.setValue(25)
         self.slider2.setEdgeLabelMode(QLabeledSlider.EdgeLabelMode.LabelIsValue)
+        self.slider2.setEdgeLabelPosition(QLabeledSlider.LabelPosition.LabelsLeft)
         layout.addWidget(self.slider2)
 
         # 3. 温度范围滑块 (-40 到 40)
