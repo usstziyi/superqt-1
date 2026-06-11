@@ -69,8 +69,10 @@ class ControlPanelDemo(QWidget):
         )
 
         # 1. 基本参数设置
-        self.params = QCollapsible("📊 基本参数")
-        params_layout = QVBoxLayout()
+        self.params = QCollapsible("基本参数")
+        self.params.layout().setContentsMargins(0, 0, 0, 0)
+        self.params.setStyleSheet("QCollapsible { border: none; }")
+        params_layout = self.params.content().layout()
 
         params_layout.addWidget(QLabel("处理模式:"))
         self.mode_combo = QEnumComboBox()
@@ -88,14 +90,13 @@ class ControlPanelDemo(QWidget):
         self.contrast.setRange(-50, 50)
         self.contrast.setValue(0)
         params_layout.addWidget(self.contrast)
-        params_widget = QWidget()
-        params_widget.setLayout(params_layout)
-        self.params.setContent(params_widget)
         layout.addWidget(self.params)
 
         # 2. 范围筛选
-        self.range_group = QCollapsible("📏 范围设置")
-        range_layout = QVBoxLayout()
+        self.range_group = QCollapsible("范围设置")
+        self.range_group.layout().setContentsMargins(0, 0, 0, 0)
+        self.range_group.setStyleSheet("QCollapsible { border: none; }")
+        range_layout = self.range_group.content().layout()
 
         range_layout.addWidget(QLabel("处理范围:"))
         self.range_slider = QRangeSlider(Qt.Orientation.Horizontal)
@@ -107,14 +108,11 @@ class ControlPanelDemo(QWidget):
         self.color_combo = QEnumComboBox()
         self.color_combo.setEnumClass(ColorScheme)
         range_layout.addWidget(self.color_combo)
-        range_widget = QWidget()
-        range_widget.setLayout(range_layout)
-        self.range_group.setContent(range_widget)
         layout.addWidget(self.range_group)
 
         # 3. 功能开关
-        self.features = QCollapsible("⚡ 功能开关")
-        features_layout = QVBoxLayout()
+        self.features = QCollapsible("功能开关")
+        features_layout = self.features.content().layout()
 
         self.auto_enhance = QToggleSwitch(text="自动增强")
         features_layout.addWidget(self.auto_enhance)
@@ -128,14 +126,11 @@ class ControlPanelDemo(QWidget):
 
         self.batch_mode = QToggleSwitch(text="批处理模式")
         features_layout.addWidget(self.batch_mode)
-        features_widget = QWidget()
-        features_widget.setLayout(features_layout)
-        self.features.setContent(features_widget)
         layout.addWidget(self.features)
 
         # 4. 输出设置
-        self.output = QCollapsible("📤 输出设置")
-        output_layout = QVBoxLayout()
+        self.output = QCollapsible("输出设置")
+        output_layout = self.output.content().layout()
 
         output_layout.addWidget(QLabel("输出格式:"))
         self.format_combo = QSearchableComboBox()
@@ -149,9 +144,6 @@ class ControlPanelDemo(QWidget):
         self.quality.setRange(1, 100)
         self.quality.setValue(90)
         output_layout.addWidget(self.quality)
-        output_widget = QWidget()
-        output_widget.setLayout(output_layout)
-        self.output.setContent(output_widget)
         layout.addWidget(self.output)
 
         # 5. 操作按钮
@@ -171,6 +163,7 @@ class ControlPanelDemo(QWidget):
         self.config_text.setReadOnly(True)
         self.config_text.setMaximumHeight(120)
         layout.addWidget(self.config_text)
+        layout.addStretch()
 
         self.update_config()
 
