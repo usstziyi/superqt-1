@@ -88,6 +88,7 @@ class DoubleSliderDemo(QWidget):
         self.precision_slider.setRange(0.000, 1.000)
         self.precision_slider.setValue(0.314)
         self.precision_slider.setSingleStep(0.001)
+        self.precision_slider.setDecimals(3)
         layout4.addWidget(self.precision_slider)
         group4.setLayout(layout4)
         layout.addWidget(group4)

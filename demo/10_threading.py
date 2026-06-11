@@ -21,7 +21,8 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QTextEdit,
 )
-from superqt.utils import thread_worker
+from superqt import QToggleSwitch
+from superqt.utils import thread_worker, ensure_main_thread
 
 
 class ThreadingDemo(QWidget):
@@ -44,7 +45,7 @@ class ThreadingDemo(QWidget):
 
         # 进度条
         self.progress = QProgressBar()
-        self.progress.setTextVisible(False)
+        self.progress.setTextVisible(True)
         layout.addWidget(self.progress)
 
         # 状态标签
@@ -74,23 +75,40 @@ class ThreadingDemo(QWidget):
         self.counter_label = QLabel("计数器: 0")
         layout.addWidget(self.counter_label)
 
-    def log(self, message):
-        """添加日志"""
-        current = self.log_text.toPlainText()
-        self.log_text.setText(current + message + "\n")
-        self.log_text.verticalScrollBar().setValue(
-            self.log_text.verticalScrollBar().maximum()
-        )
 
+    """
+    self.background_task()  被调用
+            │
+            ▼
+    ┌───────────────────────────────────────────┐
+    │ 1. 创建一个 FunctionWorker 对象           │
+    │ 2. 内部创建一个 QThread                   │
+    │ 3. 将 background_task 函数体移到该线程    │
+    │ 4. 自动调用 QThread.start() 启动线程      │
+    │ 5. 返回 FunctionWorker 对象给你           │
+    └───────────────────────────────────────────┘
+            │
+            ▼
+    后台线程开始执行 background_task 函数体
+            │
+            ▼
+    @thread_worker(start_thread=True)
+    同时主线程继续往下跑，不阻塞界面响应
+    """
+    
     @thread_worker
     def background_task(self):
         """后台任务 - 使用装饰器自动在后台线程运行"""
         for i in range(1, 11):
-            time.sleep(0.3)  # 模拟耗时操作
+            time.sleep(0.3)
+            # 配合 ensure_main_thread 装饰器
             self.log(f"后台任务进度: {i * 10}%")
-            # 通过信号更新进度条
-            self.update_progress.emit(i * 10)
+            # 配合 ensure_main_thread 装饰器
+            self.update_progress(i * 10)
         return "后台任务完成!"
+
+
+
 
     def run_background_task(self):
         """启动后台任务"""
@@ -98,9 +116,12 @@ class ThreadingDemo(QWidget):
         self.log("启动后台任务...")
         self.start_btn.setEnabled(False)
 
-        worker = self.background_task()
-        worker.returned.connect(self.on_task_finished)
-        worker.started.connect(lambda: self.log("任务开始执行"))
+        # create_worker 默认 _start_thread=False，需要手动 start()
+        self.worker = self.background_task()
+        # 连接到主线程的信号槽
+        self.worker.returned.connect(self.on_task_finished)
+        self.worker.started.connect(lambda: self.log("后台任务开始执行"))
+        self.worker.start()
 
     def run_blocking_task(self):
         """启动阻塞任务（会卡住界面）"""
@@ -125,6 +146,19 @@ class ThreadingDemo(QWidget):
         self.log(result)
         self.start_btn.setEnabled(True)
 
+
+    # 确保在主线程执行，不等待返回结果
+    @ensure_main_thread(await_result=False)  
+    def log(self, message):
+        """添加日志"""
+        current = self.log_text.toPlainText()
+        self.log_text.setText(current + message + "\n")
+        # 自动滚动到日志底部，显示最新内容
+        scrollbar = self.log_text.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+    
+    # 确保在主线程执行，不等待返回结果
+    @ensure_main_thread(await_result=False)
     def update_progress(self, value):
         """更新进度条"""
         self.progress.setValue(value)
