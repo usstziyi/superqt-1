@@ -202,7 +202,8 @@ class SignalBlockedDemo(QWidget):
     def sync_set_value(self, value):
         """同步设置所有控件的值"""
         # 同时阻断所有控件的信号，一次性更新
-        with signals_blocked(self.sync_slider), signals_blocked(self.sync_spin), signals_blocked(self.sync_check):
+        # with signals_blocked(self.sync_slider), signals_blocked(self.sync_spin), signals_blocked(self.sync_check):
+        with signals_blocked(self.sync_slider, self.sync_spin, self.sync_check):
             self.sync_slider.setValue(value)
             self.sync_spin.setValue(value)
             self.sync_check.setChecked(value > 50)
@@ -212,7 +213,7 @@ class SignalBlockedDemo(QWidget):
 
     def batch_update(self):
         """使用 signals_blocked 批量更新（只触发一次事件）"""
-        with signals_blocked(self.combo1), signals_blocked(self.combo2), signals_blocked(self.combo3):
+        with signals_blocked(self.combo1, self.combo2, self.combo3):
             self.combo1.setCurrentIndex(2)
             self.combo2.setCurrentIndex(2)
             self.combo3.setCurrentIndex(2)
