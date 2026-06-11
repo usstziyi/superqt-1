@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QTextEdit,
 )
-from superqt.utils import thread_worker
+from superqt.utils import thread_worker, ensure_main_thread
 
 
 class GeneratorWorkerDemo(QWidget):
@@ -127,24 +127,27 @@ class GeneratorWorkerDemo(QWidget):
         layout.addWidget(self.log_text)
 
     # ==================== 后台任务定义 ====================
-
+    # @thread_worker 将这个方法包装成一个后台线程工作器。
+    # 调用它不会直接执行，而是返回一个 GeneratorWorker 对象。
+    # yield 由 GeneratorWorker 后台线程中的 gen.send(val) 循环来驱动
     @thread_worker
     def task_basic_yield(self, steps: int = 10):
         """示例 1: 基本 yield —— 自动跨线程，无需 @ensure_main_thread"""
-        self._log("后台线程开始执行...")
+        self._log("后台线程开始执行...") # 可以放到yield的槽函数中
         for i in range(1, steps + 1):
             time.sleep(0.3)
             # yield 的值会通过 yielded 信号发射到主线程
-            # 不需要 @ensure_main_thread，不需要自定义 Signal
+            # 不需要 @ensure_main_thread
+            # 不需要自定义 Signal
             yield i * (100 // steps)
-        self._log("后台线程执行完毕")
+        self._log("后台线程执行完毕") # 可以放到yield的槽函数中
         return f"完成 ({steps} 步)"
 
     @thread_worker
     def task_pausable(self, total: int = 20):
         """示例 2: 可暂停/可中止的任务
 
-        每次 yield 之间，GeneratorWorker 会检查暂停/中止标记，
+        每次 yield 之间，GeneratorWorker 会检查暂停/中止 标记，
         所以必须频繁 yield 才能及时响应控制操作。
         """
         self._log("可暂停任务开始 (支持暂停/恢复/中止)")
@@ -169,7 +172,7 @@ class GeneratorWorkerDemo(QWidget):
             time.sleep(0.4)
             yield count
 
-        # 第二阶段：等待主线程传来的值
+        # 第二阶段：等待主线程传来的值(这里会快速执行，根本来不及等主线程发送数据)
         self._log("等待主线程发送数据... (点击「发送」按钮)")
         for _ in range(3):
             incre = yield count
@@ -204,22 +207,23 @@ class GeneratorWorkerDemo(QWidget):
 
     # ==================== UI 控制方法 ====================
 
+    # ---------- 示例 1 ----------
+
     def run_basic_yield(self):
         """启动示例 1"""
         self.start_btn1.setEnabled(False)
         self.progress1.setValue(0)
         self._log("=== 示例 1: yield 基础进度 ===")
 
-        worker = self.task_basic_yield()
-        worker.yielded.connect(self.progress1.setValue)
-        worker.returned.connect(
-            lambda r: (setattr(self.status1, 'setText', self.status1.setText)(r),
-                       self.start_btn1.setEnabled(True))
-        )
-        # 上面的 lambda 太复杂，拆开：
-        self._worker1 = worker
-        worker.returned.connect(self._on_basic_done)
-        worker.start()
+        # 调用被 @thread_worker 装饰的 task_basic_yield() 方法
+        # 注意：这不是直接执行函数，而是创建一个 GeneratorWorker 实例
+        # @thread_worker 装饰器将生成器函数包装为可管理的后台工作器
+        self._worker1 = self.task_basic_yield()
+        # 将 worker 的 yielded 信号连接到进度条的 setValue 槽函数
+        # 每当生成器 yield 一个值时，进度条会自动更新
+        self._worker1.yielded.connect(self.progress1.setValue)
+        self._worker1.returned.connect(self._on_basic_done)
+        self._worker1.start()
 
     def _on_basic_done(self, result):
         self.status1.setText(result)
@@ -236,12 +240,15 @@ class GeneratorWorkerDemo(QWidget):
         self.status2.setText("运行中...")
         self._log("=== 示例 2: 可暂停 / 可中止 ===")
 
+        # 先清理旧 worker（如果存在）
+        self._cleanup_pausable_worker()
         self._worker2 = self.task_pausable()
         self._worker2.yielded.connect(self.progress2.setValue)
         self._worker2.returned.connect(self._on_pausable_done)
         self._worker2.aborted.connect(self._on_pausable_aborted)
-        self._worker2.paused.connect(lambda: self._on_paused())
-        self._worker2.resumed.connect(lambda: self._on_resumed())
+        self._worker2.paused.connect(self._on_paused)
+        self._worker2.resumed.connect(self._on_resumed)
+        self._worker2.finished.connect(self._cleanup_pausable_worker)
         self._worker2.start()
 
     def toggle_pause(self):
@@ -280,6 +287,20 @@ class GeneratorWorkerDemo(QWidget):
         self.pause_btn2.setEnabled(False)
         self.abort_btn2.setEnabled(False)
         self.pause_btn2.setText("暂停")
+
+    def _cleanup_pausable_worker(self):
+        """断开 worker2 的所有信号连接并释放引用"""
+        if hasattr(self, '_worker2') and self._worker2 is not None:
+            try:
+                self._worker2.yielded.disconnect(self.progress2.setValue)
+                self._worker2.returned.disconnect(self._on_pausable_done)
+                self._worker2.aborted.disconnect(self._on_pausable_aborted)
+                self._worker2.paused.disconnect(self._on_paused)
+                self._worker2.resumed.disconnect(self._on_resumed)
+                self._worker2.finished.disconnect(self._cleanup_pausable_worker)
+            except (RuntimeError, TypeError):
+                pass  # 已经断开或 worker 已销毁
+            self._worker2 = None
 
     # ---------- 示例 3 ----------
 
@@ -340,11 +361,8 @@ class GeneratorWorkerDemo(QWidget):
 
     # ==================== 工具方法 ====================
 
+    @ensure_main_thread
     def _log(self, message: str):
-        """添加日志（被 GeneratorWorker 在子线程调用也是安全的，
-        因为它的输出只用于 yielded/returned/aborted 回调中，
-        而这些回调都在主线程执行）
-        """
         self.log_text.append(message)
         scrollbar = self.log_text.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
