@@ -10,6 +10,7 @@ QElidingLabel 是 QLabel 的增强版，当文本超出控件宽度时，
 会自动在适当位置添加省略号 (...)。
 """
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
     QWidget,
