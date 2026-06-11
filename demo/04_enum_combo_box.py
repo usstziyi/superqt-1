@@ -62,6 +62,7 @@ class EnumComboBoxDemo(QWidget):
         group1 = QGroupBox("1. 选择主题")
         layout1 = QVBoxLayout()
         self.theme_combo = QEnumComboBox()
+        # 将 Theme 枚举类绑定到 QEnumComboBox 控件上
         self.theme_combo.setEnumClass(Theme)
         self.theme_combo.currentEnumChanged.connect(self.on_theme_changed)
         layout1.addWidget(self.theme_combo)
