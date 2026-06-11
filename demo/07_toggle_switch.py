@@ -9,6 +9,7 @@ Demo 7: QToggleSwitch - 现代开关控件
 QToggleSwitch 提供类似手机上的开关控件，比传统的 QCheckBox 更现代美观。
 """
 
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QApplication,
     QWidget,
@@ -37,9 +38,9 @@ class ToggleSwitchDemo(QWidget):
         # 1. 基本开关
         group1 = QGroupBox("1. 基本开关")
         layout1 = QVBoxLayout()
-        self.switch1 = QToggleSwitch()
-        self.switch1.toggled.connect(lambda checked: self.on_toggle("开关1", checked))
-        layout1.addWidget(self.switch1)
+        switch1 = QToggleSwitch()
+        switch1.toggled.connect(lambda checked: self.on_toggle("开关1", checked))
+        layout1.addWidget(switch1)
         group1.setLayout(layout1)
         layout.addWidget(group1)
 
@@ -91,6 +92,21 @@ class ToggleSwitchDemo(QWidget):
         group3.setLayout(layout3)
         layout.addWidget(group3)
 
+        # 设置所有开关开启时的轨道颜色为绿色
+        green = QColor("#4CAF50")
+        for sw in [
+            switch1,
+            wifi_switch,
+            bluetooth_switch,
+            location_switch,
+            dark_mode,
+            notifications,
+            auto_update,
+            analytics,
+        ]:
+            sw.onColor = green  # 设置开关开启时的轨道颜色为绿色
+            # sw.handleColor = green  # 设置开关手柄颜色为绿色（当前注释掉）
+
         # 状态显示
         self.status_text = QTextEdit()
         self.status_text.setReadOnly(True)
@@ -104,9 +120,9 @@ class ToggleSwitchDemo(QWidget):
         msg = f"{name}: {status}"
         current = self.status_text.toPlainText()
         self.status_text.setText(current + msg + "\n")
-        self.status_text.verticalScrollBar().setValue(
-            self.status_text.verticalScrollBar().maximum()
-        )
+        # 自动滚动到底部，显示最新的操作日志
+        scrollbar = self.status_text.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
 
 
 if __name__ == "__main__":
